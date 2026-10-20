@@ -1,0 +1,1037 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Arquivando Chat</title>
+  <style>
+    :root {
+      --bg: #0f1419;
+      --bg-secondary: #1a2332;
+      --bg-tertiary: #243044;
+      --text: #e7e9ea;
+      --text-muted: #8b98a5;
+      --accent: #1d9bf0;
+      --accent-hover: #1a8cd8;
+      --user-bg: #1d9bf0;
+      --chat-bg: #2f3336;
+      --border: #2f3336;
+      --success: #00ba7c;
+      --danger: #f4212e;
+      --radius: 12px;
+      --shadow: 0 4px 16px rgba(0,0,0,0.35);
+    }
+
+    [data-theme="light"] {
+      --bg: #f7f9f9;
+      --bg-secondary: #ffffff;
+      --bg-tertiary: #eff3f4;
+      --text: #0f1419;
+      --text-muted: #536471;
+      --accent: #1d9bf0;
+      --accent-hover: #1a8cd8;
+      --user-bg: #1d9bf0;
+      --chat-bg: #eff3f4;
+      --border: #cfd9de;
+      --success: #00ba7c;
+      --danger: #f4212e;
+      --shadow: 0 4px 16px rgba(0,0,0,0.1);
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      height: 100vh;
+      height: 100dvh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    /* ===== Header ===== */
+    header {
+      background: var(--bg-secondary);
+      border-bottom: 1px solid var(--border);
+      padding: 10px 14px 8px;
+      flex-shrink: 0;
+    }
+
+    .header-top {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .logo {
+      font-size: 1.05rem;
+      font-weight: 700;
+      color: var(--accent);
+      white-space: nowrap;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .version {
+      font-size: 0.7rem;
+      color: var(--text-muted);
+      font-weight: 500;
+      margin-left: 2px;
+    }
+
+    .header-right {
+      margin-left: auto;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .stats {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      white-space: nowrap;
+    }
+
+    .btn-icon {
+      background: transparent;
+      border: none;
+      color: var(--text-muted);
+      cursor: pointer;
+      padding: 6px;
+      border-radius: 50%;
+      font-size: 1.15rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .btn-icon:active { background: var(--bg-tertiary); }
+
+    /* Title bar (clickable) */
+    .title-bar {
+      margin-top: 8px;
+      background: var(--bg-tertiary);
+      border-radius: 8px;
+      padding: 8px 12px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      transition: background 0.15s;
+      min-height: 36px;
+    }
+
+    .title-bar:active { background: var(--border); }
+
+    .title-bar .title-text {
+      flex: 1;
+      font-size: 0.9rem;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      color: var(--text);
+    }
+
+    .title-bar .title-text.placeholder {
+      color: var(--text-muted);
+      font-style: italic;
+    }
+
+    .title-bar .edit-hint {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      flex-shrink: 0;
+    }
+
+    /* ===== Main ===== */
+    main {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      min-height: 0;
+    }
+
+    .messages {
+      flex: 1;
+      overflow-y: auto;
+      padding: 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      scroll-behavior: smooth;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    .message {
+      max-width: 88%;
+      padding: 12px 14px;
+      border-radius: var(--radius);
+      position: relative;
+      line-height: 1.45;
+      word-wrap: break-word;
+      white-space: pre-wrap;
+      animation: fadeIn 0.22s ease;
+      cursor: pointer;
+      transition: transform 0.12s, box-shadow 0.15s;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+
+    .message:active { transform: scale(0.98); }
+    .message.selected { box-shadow: 0 0 0 2px var(--accent); }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(6px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .message.user {
+      align-self: flex-start;
+      background: var(--user-bg);
+      color: #fff;
+      border-bottom-left-radius: 4px;
+    }
+
+    .message.chat {
+      align-self: flex-end;
+      background: var(--chat-bg);
+      color: var(--text);
+      border-bottom-right-radius: 4px;
+    }
+
+    .message .meta {
+      font-size: 0.7rem;
+      opacity: 0.75;
+      margin-bottom: 4px;
+      font-weight: 600;
+    }
+
+    .msg-actions {
+      display: none;
+      position: absolute;
+      bottom: -38px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 4px 6px;
+      gap: 2px;
+      box-shadow: var(--shadow);
+      z-index: 20;
+      white-space: nowrap;
+    }
+
+    .message.selected .msg-actions { display: flex; }
+
+    .msg-actions button {
+      background: transparent;
+      border: none;
+      color: var(--text);
+      padding: 6px 12px;
+      border-radius: 16px;
+      font-size: 0.8rem;
+      font-weight: 500;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .msg-actions button:active { background: var(--bg-tertiary); }
+    .msg-actions button.danger { color: var(--danger); }
+
+    /* ===== Controls ===== */
+    .controls {
+      background: var(--bg-secondary);
+      border-top: 1px solid var(--border);
+      padding: 12px 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      flex-shrink: 0;
+      padding-bottom: max(12px, env(safe-area-inset-bottom));
+    }
+
+    .paste-row { display: flex; gap: 10px; }
+
+    .paste-btn {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 13px 12px;
+      border: none;
+      border-radius: var(--radius);
+      font-size: 0.95rem;
+      font-weight: 600;
+      cursor: pointer;
+      color: #fff;
+      transition: transform 0.1s;
+    }
+
+    .paste-btn.user { background: var(--user-bg); }
+    .paste-btn.chat { background: #536471; }
+    .paste-btn:active { transform: scale(0.97); }
+
+    .action-row {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .btn {
+      padding: 9px 14px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: var(--bg-tertiary);
+      color: var(--text);
+      font-size: 0.85rem;
+      font-weight: 500;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      white-space: nowrap;
+    }
+
+    .btn:active { opacity: 0.85; }
+    .btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+    .btn.danger { background: transparent; border-color: var(--danger); color: var(--danger); }
+    .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    .btn-save-main {
+      flex: 1;
+      justify-content: center;
+      padding: 11px;
+      font-size: 0.95rem;
+    }
+
+    /* ===== Empty state ===== */
+    .empty-state {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      color: var(--text-muted);
+      gap: 12px;
+      padding: 40px 20px;
+      text-align: center;
+    }
+
+    .empty-state .icon { font-size: 2.8rem; opacity: 0.4; }
+    .empty-state p { max-width: 280px; line-height: 1.5; font-size: 0.95rem; }
+
+    /* ===== Modals ===== */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.65);
+      z-index: 1000;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      animation: fadeOverlay 0.2s ease;
+    }
+
+    .modal-overlay.show { display: flex; }
+    .modal-overlay.full { padding: 0; align-items: stretch; }
+
+    @keyframes fadeOverlay {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+
+    .modal {
+      background: var(--bg-secondary);
+      border-radius: 16px;
+      width: 100%;
+      max-width: 360px;
+      box-shadow: var(--shadow);
+      animation: scaleIn 0.22s ease;
+      overflow: hidden;
+    }
+
+    .modal.full-modal {
+      max-width: none;
+      border-radius: 0;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      animation: slideUp 0.25s ease;
+    }
+
+    @keyframes scaleIn {
+      from { transform: scale(0.92); opacity: 0; }
+      to { transform: scale(1); opacity: 1; }
+    }
+
+    @keyframes slideUp {
+      from { transform: translateY(40px); opacity: 0.7; }
+      to { transform: translateY(0); opacity: 1; }
+    }
+
+    .modal-header {
+      padding: 16px 18px 10px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .modal-header h2 {
+      font-size: 1.1rem;
+      font-weight: 600;
+    }
+
+    .modal-header .close-btn {
+      background: transparent;
+      border: none;
+      color: var(--text-muted);
+      font-size: 1.3rem;
+      cursor: pointer;
+      padding: 4px 8px;
+      border-radius: 8px;
+    }
+
+    .modal-body {
+      padding: 8px 18px 18px;
+    }
+
+    .modal-body p {
+      font-size: 0.9rem;
+      color: var(--text-muted);
+      margin-bottom: 14px;
+      line-height: 1.4;
+    }
+
+    .modal-body input,
+    .modal-body textarea {
+      width: 100%;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 12px 14px;
+      color: var(--text);
+      font-size: 1rem;
+      outline: none;
+      font-family: inherit;
+    }
+
+    .modal-body input:focus,
+    .modal-body textarea:focus { border-color: var(--accent); }
+
+    .modal-body textarea {
+      min-height: 200px;
+      resize: none;
+      line-height: 1.5;
+      flex: 1;
+    }
+
+    .modal.full-modal .modal-body {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      padding: 12px 16px;
+      overflow: hidden;
+    }
+
+    .modal-footer {
+      padding: 0 18px 18px;
+      display: flex;
+      gap: 10px;
+    }
+
+    .modal-footer .btn {
+      flex: 1;
+      justify-content: center;
+      padding: 12px;
+      font-size: 0.95rem;
+    }
+
+    .modal.full-modal .modal-footer {
+      padding: 12px 16px;
+      padding-bottom: max(12px, env(safe-area-inset-bottom));
+      border-top: 1px solid var(--border);
+    }
+
+    /* Save options in modal */
+    .save-options {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .save-option-btn {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 14px 16px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      color: var(--text);
+      font-size: 1rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background 0.15s;
+      text-align: left;
+    }
+
+    .save-option-btn:active { background: var(--bg-tertiary); }
+
+    .save-option-btn .icon {
+      font-size: 1.4rem;
+      width: 32px;
+      text-align: center;
+    }
+
+    .save-option-btn .label { flex: 1; }
+    .save-option-btn .desc {
+      font-size: 0.78rem;
+      color: var(--text-muted);
+      font-weight: 400;
+      margin-top: 2px;
+    }
+
+    /* Toast */
+    .toast {
+      position: fixed;
+      bottom: 100px;
+      left: 50%;
+      transform: translateX(-50%) translateY(60px);
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 12px 22px;
+      border-radius: 10px;
+      box-shadow: var(--shadow);
+      font-size: 0.9rem;
+      z-index: 2000;
+      opacity: 0;
+      transition: all 0.3s ease;
+      pointer-events: none;
+      max-width: 90%;
+      text-align: center;
+    }
+
+    .toast.show {
+      transform: translateX(-50%) translateY(0);
+      opacity: 1;
+    }
+
+    .toast.success { border-color: var(--success); }
+    .toast.error { border-color: var(--danger); }
+
+    /* Scrollbar */
+    ::-webkit-scrollbar { width: 5px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="header-top">
+      <div class="logo">
+        💬 Arquivando Chat
+        <span class="version">v1.2</span>
+      </div>
+      <div class="header-right">
+        <span class="stats" id="stats">0 msgs</span>
+        <button class="btn-icon" id="themeBtn" title="Tema">☀️</button>
+      </div>
+    </div>
+    <div class="title-bar" id="titleBar" title="Toque para editar o título">
+      <span class="title-text placeholder" id="titleDisplay">Toque para adicionar título</span>
+      <span class="edit-hint">✏️</span>
+    </div>
+  </header>
+
+  <main>
+    <div class="messages" id="messages">
+      <div class="empty-state" id="emptyState">
+        <div class="icon">📋</div>
+        <p>Copie uma mensagem e toque em <strong>Colar Eu</strong> ou <strong>Colar Chat</strong>.</p>
+      </div>
+    </div>
+
+    <div class="controls">
+      <div class="paste-row">
+        <button class="paste-btn user" id="pasteUserBtn">📋 Colar Eu</button>
+        <button class="paste-btn chat" id="pasteChatBtn">📋 Colar Chat</button>
+      </div>
+      <div class="action-row">
+        <button class="btn" id="undoBtn" disabled>↩ Desfazer</button>
+        <button class="btn danger" id="clearBtn" disabled>🗑 Limpar</button>
+        <button class="btn primary btn-save-main" id="saveBtn" disabled>💾 Salvar</button>
+      </div>
+    </div>
+  </main>
+
+  <!-- Title Modal -->
+  <div class="modal-overlay" id="titleModal">
+    <div class="modal">
+      <div class="modal-header">
+        <h2>Título da conversa</h2>
+        <button class="close-btn" id="titleModalClose">✕</button>
+      </div>
+      <div class="modal-body">
+        <p>Opcional. Se deixar em branco, será usado “Arquivando Chat” + data/hora ao salvar.</p>
+        <input type="text" id="titleInput" placeholder="Ex: Conversa sobre o jogo..." maxlength="120">
+      </div>
+      <div class="modal-footer">
+        <button class="btn" id="titleClearBtn">Limpar</button>
+        <button class="btn primary" id="titleSaveBtn">OK</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Save Modal -->
+  <div class="modal-overlay" id="saveModal">
+    <div class="modal">
+      <div class="modal-header">
+        <h2>Salvar conversa</h2>
+        <button class="close-btn" id="saveModalClose">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="save-options">
+          <button class="save-option-btn" id="saveTxtOption">
+            <span class="icon">📄</span>
+            <span class="label">
+              Salvar como Texto
+              <div class="desc">Arquivo .txt limpo, só o conteúdo</div>
+            </span>
+          </button>
+          <button class="save-option-btn" id="saveHtmlOption">
+            <span class="icon">🌐</span>
+            <span class="label">
+              Salvar como HTML
+              <div class="desc">Visual de chat bonito para visualizar</div>
+            </span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Edit Message Modal (fullscreen) -->
+  <div class="modal-overlay full" id="editModal">
+    <div class="modal full-modal">
+      <div class="modal-header" style="border-bottom:1px solid var(--border); padding:12px 16px;">
+        <h2 id="modalTitle">Editar mensagem</h2>
+        <button class="close-btn" id="modalCloseBtn">✕</button>
+      </div>
+      <div class="modal-body">
+        <textarea id="modalTextarea" placeholder="Texto da mensagem..."></textarea>
+      </div>
+      <div class="modal-footer">
+        <button class="btn" id="modalCopyBtn">📋 Copiar</button>
+        <button class="btn primary" id="modalSaveBtn">✓ Salvar</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <script>
+    const APP_NAME = 'Arquivando Chat';
+    const VERSION = '1.2';
+
+    let messages = [];
+    let convTitle = '';
+    let theme = localStorage.getItem('theme') || 'dark';
+    let selectedId = null;
+    let editingId = null;
+
+    // DOM
+    const messagesEl = document.getElementById('messages');
+    const emptyState = document.getElementById('emptyState');
+    const statsEl = document.getElementById('stats');
+    const titleBar = document.getElementById('titleBar');
+    const titleDisplay = document.getElementById('titleDisplay');
+    const pasteUserBtn = document.getElementById('pasteUserBtn');
+    const pasteChatBtn = document.getElementById('pasteChatBtn');
+    const undoBtn = document.getElementById('undoBtn');
+    const clearBtn = document.getElementById('clearBtn');
+    const saveBtn = document.getElementById('saveBtn');
+    const themeBtn = document.getElementById('themeBtn');
+    const toastEl = document.getElementById('toast');
+
+    // Title modal
+    const titleModal = document.getElementById('titleModal');
+    const titleInput = document.getElementById('titleInput');
+    const titleModalClose = document.getElementById('titleModalClose');
+    const titleClearBtn = document.getElementById('titleClearBtn');
+    const titleSaveBtn = document.getElementById('titleSaveBtn');
+
+    // Save modal
+    const saveModal = document.getElementById('saveModal');
+    const saveModalClose = document.getElementById('saveModalClose');
+    const saveTxtOption = document.getElementById('saveTxtOption');
+    const saveHtmlOption = document.getElementById('saveHtmlOption');
+
+    // Edit modal
+    const editModal = document.getElementById('editModal');
+    const modalTextarea = document.getElementById('modalTextarea');
+    const modalTitle = document.getElementById('modalTitle');
+    const modalCloseBtn = document.getElementById('modalCloseBtn');
+    const modalCopyBtn = document.getElementById('modalCopyBtn');
+    const modalSaveBtn = document.getElementById('modalSaveBtn');
+
+    // Theme
+    function applyTheme() {
+      document.documentElement.setAttribute('data-theme', theme);
+      themeBtn.textContent = theme === 'dark' ? '☀️' : '🌙';
+      localStorage.setItem('theme', theme);
+    }
+    themeBtn.addEventListener('click', () => {
+      theme = theme === 'dark' ? 'light' : 'dark';
+      applyTheme();
+    });
+    applyTheme();
+
+    // Toast
+    let toastTimer;
+    function showToast(msg, type = '') {
+      toastEl.textContent = msg;
+      toastEl.className = 'toast show ' + type;
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => toastEl.classList.remove('show'), 2500);
+    }
+
+    // Title
+    function updateTitleDisplay() {
+      if (convTitle) {
+        titleDisplay.textContent = convTitle;
+        titleDisplay.classList.remove('placeholder');
+      } else {
+        titleDisplay.textContent = 'Toque para adicionar título';
+        titleDisplay.classList.add('placeholder');
+      }
+    }
+
+    titleBar.addEventListener('click', () => {
+      titleInput.value = convTitle;
+      titleModal.classList.add('show');
+      setTimeout(() => titleInput.focus(), 200);
+    });
+
+    titleModalClose.addEventListener('click', () => titleModal.classList.remove('show'));
+    titleClearBtn.addEventListener('click', () => {
+      titleInput.value = '';
+      titleInput.focus();
+    });
+    titleSaveBtn.addEventListener('click', () => {
+      convTitle = titleInput.value.trim();
+      updateTitleDisplay();
+      titleModal.classList.remove('show');
+      showToast(convTitle ? 'Título definido' : 'Sem título', 'success');
+    });
+
+    titleInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') titleSaveBtn.click();
+    });
+
+    // Deselect messages
+    document.addEventListener('click', (e) => {
+      if (!e.target.closest('.message') && !e.target.closest('.msg-actions')) {
+        selectedId = null;
+        document.querySelectorAll('.message.selected').forEach(el => el.classList.remove('selected'));
+      }
+    });
+
+    function updateUI() {
+      const count = messages.length;
+      statsEl.textContent = count === 0 ? '0 msgs' : `${count} msg${count > 1 ? 's' : ''}`;
+      undoBtn.disabled = count === 0;
+      clearBtn.disabled = count === 0;
+      saveBtn.disabled = count === 0;
+      emptyState.style.display = count === 0 ? 'flex' : 'none';
+    }
+
+    function renderMessages() {
+      const kids = Array.from(messagesEl.children);
+      kids.forEach(el => { if (el !== emptyState) el.remove(); });
+
+      messages.forEach(msg => {
+        const div = document.createElement('div');
+        div.className = `message ${msg.role}`;
+        if (msg.id === selectedId) div.classList.add('selected');
+        div.dataset.id = msg.id;
+
+        const meta = document.createElement('div');
+        meta.className = 'meta';
+        meta.textContent = msg.role === 'user' ? 'Você' : 'Chat';
+
+        const content = document.createElement('div');
+        content.textContent = msg.text;
+
+        const actions = document.createElement('div');
+        actions.className = 'msg-actions';
+        actions.innerHTML = `
+          <button data-act="copy">📋 Copiar</button>
+          <button data-act="edit">✏️ Editar</button>
+          <button data-act="delete" class="danger">🗑</button>
+        `;
+
+        actions.querySelector('[data-act="copy"]').addEventListener('click', (e) => {
+          e.stopPropagation();
+          copyText(msg.text);
+        });
+        actions.querySelector('[data-act="edit"]').addEventListener('click', (e) => {
+          e.stopPropagation();
+          openEditModal(msg.id);
+        });
+        actions.querySelector('[data-act="delete"]').addEventListener('click', (e) => {
+          e.stopPropagation();
+          deleteMessage(msg.id);
+        });
+
+        div.appendChild(meta);
+        div.appendChild(content);
+        div.appendChild(actions);
+
+        div.addEventListener('click', (e) => {
+          e.stopPropagation();
+          if (selectedId === msg.id) {
+            selectedId = null;
+            div.classList.remove('selected');
+          } else {
+            selectedId = msg.id;
+            document.querySelectorAll('.message.selected').forEach(el => el.classList.remove('selected'));
+            div.classList.add('selected');
+          }
+        });
+
+        messagesEl.appendChild(div);
+      });
+
+      messagesEl.scrollTop = messagesEl.scrollHeight;
+      updateUI();
+    }
+
+    function addMessage(role, text) {
+      const trimmed = text.trim();
+      if (!trimmed) {
+        showToast('Texto vazio', 'error');
+        return;
+      }
+      messages.push({
+        id: Date.now().toString(36) + Math.random().toString(36).slice(2, 5),
+        role,
+        text: trimmed
+      });
+      selectedId = null;
+      renderMessages();
+      showToast(role === 'user' ? 'Mensagem sua adicionada' : 'Mensagem do chat adicionada', 'success');
+    }
+
+    function deleteMessage(id) {
+      messages = messages.filter(m => m.id !== id);
+      selectedId = null;
+      renderMessages();
+      showToast('Mensagem removida');
+    }
+
+    // Edit modal
+    function openEditModal(id) {
+      const msg = messages.find(m => m.id === id);
+      if (!msg) return;
+      editingId = id;
+      selectedId = null;
+      modalTitle.textContent = msg.role === 'user' ? 'Editar (Você)' : 'Editar (Chat)';
+      modalTextarea.value = msg.text;
+      editModal.classList.add('show');
+      setTimeout(() => {
+        modalTextarea.focus();
+        modalTextarea.setSelectionRange(modalTextarea.value.length, modalTextarea.value.length);
+      }, 280);
+    }
+
+    function closeEditModal() {
+      editModal.classList.remove('show');
+      editingId = null;
+      renderMessages();
+    }
+
+    modalCloseBtn.addEventListener('click', closeEditModal);
+    modalSaveBtn.addEventListener('click', () => {
+      if (!editingId) return;
+      const msg = messages.find(m => m.id === editingId);
+      if (msg) {
+        const newText = modalTextarea.value.trim();
+        if (newText) {
+          msg.text = newText;
+          showToast('Mensagem atualizada', 'success');
+        }
+      }
+      closeEditModal();
+    });
+    modalCopyBtn.addEventListener('click', () => copyText(modalTextarea.value));
+
+    // Copy helper
+    async function copyText(text) {
+      try {
+        await navigator.clipboard.writeText(text);
+        showToast('Copiado!', 'success');
+      } catch {
+        const ta = document.createElement('textarea');
+        ta.value = text;
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand('copy');
+        document.body.removeChild(ta);
+        showToast('Copiado!', 'success');
+      }
+    }
+
+    // Paste
+    async function pasteFromClipboard(role) {
+      try {
+        const text = await navigator.clipboard.readText();
+        addMessage(role, text);
+      } catch {
+        const text = prompt('Cole o texto aqui:');
+        if (text !== null) addMessage(role, text);
+      }
+    }
+
+    pasteUserBtn.addEventListener('click', () => pasteFromClipboard('user'));
+    pasteChatBtn.addEventListener('click', () => pasteFromClipboard('chat'));
+
+    // Undo / Clear
+    undoBtn.addEventListener('click', () => {
+      if (messages.length === 0) return;
+      messages.pop();
+      selectedId = null;
+      renderMessages();
+      showToast('Última mensagem removida');
+    });
+
+    clearBtn.addEventListener('click', () => {
+      if (messages.length === 0) return;
+      if (confirm('Apagar todas as mensagens?')) {
+        messages = [];
+        selectedId = null;
+        renderMessages();
+        showToast('Conversa limpa');
+      }
+    });
+
+    // Save
+    saveBtn.addEventListener('click', () => {
+      saveModal.classList.add('show');
+    });
+
+    saveModalClose.addEventListener('click', () => saveModal.classList.remove('show'));
+
+    function getFileName(ext) {
+      const now = new Date();
+      const date = now.toISOString().slice(0, 10);
+      const time = now.toTimeString().slice(0, 5).replace(':', 'h');
+      const base = convTitle
+        ? convTitle.replace(/[<>:"/\\|?*]/g, '_').slice(0, 60)
+        : APP_NAME;
+      return `${base}_${date}_${time}.${ext}`;
+    }
+
+    function toPlainText() {
+      return messages.map(m => {
+        const who = m.role === 'user' ? 'Você' : 'Chat';
+        return `${who}:\n${m.text}\n`;
+      }).join('\n');
+    }
+
+    function toHTML() {
+      const title = convTitle || APP_NAME;
+      const msgsHtml = messages.map(m => {
+        const cls = m.role === 'user' ? 'user' : 'chat';
+        const who = m.role === 'user' ? 'Você' : 'Chat';
+        const escaped = m.text
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/\n/g, '<br>');
+        return `<div class="msg ${cls}"><div class="who">${who}</div><div class="txt">${escaped}</div></div>`;
+      }).join('\n');
+
+      return `<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>${title.replace(/</g, '&lt;')}</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #0f1419; color: #e7e9ea; margin: 0; padding: 20px 16px; min-height: 100vh; }
+  h1 { font-size: 1.25rem; margin-bottom: 20px; color: #1d9bf0; text-align: center; }
+  .chat { max-width: 680px; margin: 0 auto; display: flex; flex-direction: column; gap: 10px; }
+  .msg { max-width: 85%; padding: 12px 14px; border-radius: 12px; line-height: 1.45; word-wrap: break-word; }
+  .msg.user { align-self: flex-start; background: #1d9bf0; color: #fff; border-bottom-left-radius: 4px; }
+  .msg.chat { align-self: flex-end; background: #2f3336; border-bottom-right-radius: 4px; }
+  .who { font-size: 0.72rem; opacity: 0.75; margin-bottom: 4px; font-weight: 600; }
+  .meta { text-align: center; color: #8b98a5; font-size: 0.82rem; margin-top: 28px; }
+</style>
+</head>
+<body>
+  <div class="chat">
+    <h1>${title.replace(/</g, '&lt;')}</h1>
+    ${msgsHtml}
+    <div class="meta">Arquivado em ${new Date().toLocaleString('pt-BR')} · ${messages.length} mensagens · ${APP_NAME} ${VERSION}</div>
+  </div>
+</body>
+</html>`;
+    }
+
+    function downloadFile(content, ext, mime) {
+      const filename = getFileName(ext);
+      const blob = new Blob([content], { type: mime });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      a.click();
+      URL.revokeObjectURL(url);
+      showToast(`Download: ${filename}`, 'success');
+      saveModal.classList.remove('show');
+    }
+
+    saveTxtOption.addEventListener('click', () => {
+      downloadFile(toPlainText(), 'txt', 'text/plain');
+    });
+
+    saveHtmlOption.addEventListener('click', () => {
+      downloadFile(toHTML(), 'html', 'text/html');
+    });
+
+    // Keyboard
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        if (editModal.classList.contains('show')) closeEditModal();
+        else if (titleModal.classList.contains('show')) titleModal.classList.remove('show');
+        else if (saveModal.classList.contains('show')) saveModal.classList.remove('show');
+      }
+      if ((e.ctrlKey || e.metaKey) && e.key === 'z' && !editModal.classList.contains('show')) {
+        e.preventDefault();
+        undoBtn.click();
+      }
+    });
+
+    // Close modals on overlay click
+    [titleModal, saveModal].forEach(modal => {
+      modal.addEventListener('click', (e) => {
+        if (e.target === modal) modal.classList.remove('show');
+      });
+    });
+
+    updateTitleDisplay();
+    updateUI();
+  </script>
+</body>
+</html>

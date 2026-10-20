@@ -1,0 +1,33 @@
+
+plugins {
+    id 'com.android.application'
+}
+
+android {
+    namespace 'com.example.arquivandochat'
+    compileSdk 34
+
+    defaultConfig {
+        applicationId "com.example.arquivandochat"
+        minSdk 21
+        targetSdk 34
+        versionCode 2
+        versionName "1.2"
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+        }
+        debug {
+            minifyEnabled false
+        }
+    }
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+}
+
+dependencies {
+}
